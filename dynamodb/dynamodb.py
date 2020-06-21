@@ -41,6 +41,9 @@ class Functions(dict):
             data['updated_at'] = datetime.datetime.now().timestamp()
         return data
 
+    def replace_numbers(self, obj):
+        return json.loads(json.dumps(self.insert(obj)), parse_float=Decimal, parse_int=Decimal)
+
     def replace_decimals(self, obj):
         if isinstance(obj, list):
             for i in range(len(obj)):
@@ -82,8 +85,6 @@ class Functions(dict):
                         'contains',
                         'begins_with',
                         'attribute_type',
-                        'attribute_exists',
-                        'attribute_not_exists',
                     ]:
                         expressions += f"{ op if pos else '' } {comp}(#{key} , :{key}) "
                     else:
@@ -119,37 +120,36 @@ class Functions(dict):
         except Exception as e:
             return e
 
-    def add(self, data):
+    def insert(self, data):
         try:
-            data = json.loads(json.dumps(self.insert(data)), parse_float=Decimal, parse_int=Decimal)
-            return self.dynamodb.put_item(Item = data)
+            return self.dynamodb.put_item(Item = self.replace_numbers(data))
         except Exception as e:
             return e
 
     def get(self, key):
         try:
-            get = self.dynamodb.get_item(Key = key)
+            get = self.dynamodb.get_item(Key = self.replace_numbers({ self.table['uuid']: key }))
             return self.replace_decimals(get)
         except Exception as e:
             return e
 
     def delete(self, key):
         try:
-            delete = self.dynamodb.delete_item(Key = key)
+            delete = self.dynamodb.delete_item(Key = self.replace_numbers({ self.table['uuid']: key }))
             return self.replace_decimals(delete)
         except Exception as e:
             return e
 
     def put(self, data):
         try:
-            data = json.loads(json.dumps(self.insert(data)), parse_float=Decimal, parse_int=Decimal)
-            return self.replace_decimals(self.dynamodb.put_item(Item = data))
+            update = self.dynamodb.put_item(Item = self.replace_numbers(data))
+            return self.replace_decimals(update)
         except Exception as e:
             return e
 
     def batch_insert(self, items):
         try:
-            items = json.loads(json.dumps(items), parse_float=Decimal, parse_int=Decimal)
+            items = self.replace_numbers(items)
             with self.dynamodb.batch_writer() as batch:
                 return self.replace_decimals([
                     batch.put_item(Item = item)
@@ -163,7 +163,7 @@ class Functions(dict):
         try:
             with self.dynamodb.batch_writer() as batch:
                 self.replace_decimals([
-                    batch.delete_item(Key = { self.table['uuid']: item })
+                    batch.delete_item(Key = self.replace_numbers({ self.table['uuid']: item }))
                     for item in items
                 ])
                 return "Success"
@@ -175,7 +175,7 @@ class Functions(dict):
         try:
             with self.dynamodb.batch_writer() as batch:
                 return self.replace_decimals([
-                    batch.put_item(Item = item)
+                    batch.put_item(Item = self.replace_numbers(item))
                     for item in items
                 ])
             return []
@@ -186,7 +186,7 @@ class Functions(dict):
         try:
             with self.dynamodb.batch_writer() as batch:
                 return self.replace_decimals([
-                    batch.get_item(Key = { self.table['uuid']: item })
+                    batch.get_item(Key = self.replace_numbers({ self.table['uuid']: item }))
                     for item in items
                 ])
             return []
