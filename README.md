@@ -1,7 +1,7 @@
 # python-dynamo
 
-[![Build Status]()]()
-![PyPi version]()
+[![Build Status](https://api.travis-ci.org/truly-systems/dynamodb.svg?branch=master)](https://travis-ci.org/AllanKT/dynamodb)
+![PyPi version](https://img.shields.io/pypi/v/dynamodb.svg)
 
 DynamoDB SDK AWS implementation in Python developed by AllanKT.
 
